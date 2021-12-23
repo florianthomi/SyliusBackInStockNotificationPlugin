@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Webgriffe\SyliusBackInStockNotificationPlugin\Command;
 
+use App\Webservice\MauticWebservice;
 use Psr\Log\LoggerInterface;
 use Sylius\Component\Channel\Model\ChannelInterface;
 use Sylius\Component\Core\Model\ProductVariantInterface;
@@ -31,17 +32,22 @@ final class AlertCommand extends Command
     /** @var LoggerInterface */
     private $logger;
 
+    /** @var LoggerInterface */
+    private $mauticWebService;
+
     public function __construct(
         LoggerInterface $logger,
         SenderInterface $sender,
         AvailabilityCheckerInterface $availabilityChecker,
         RepositoryInterface $backInStockNotificationRepository,
+        MauticWebservice $mauticWebService,
         string $name = null
     ) {
         $this->backInStockNotificationRepository = $backInStockNotificationRepository;
         $this->availabilityChecker = $availabilityChecker;
         $this->sender = $sender;
         $this->logger = $logger;
+        $this->mauticWebService = $mauticWebService;
         parent::__construct($name);
     }
 
@@ -70,9 +76,13 @@ final class AlertCommand extends Command
             }
 
             if ($this->availabilityChecker->isStockAvailable($productVariant)) {
-                $this->sendEmail($subscription, $productVariant, $channel);
+                $this->mauticWebService->sendAlertStockEmail($subscription->getProductVariant()->getProduct(), $subscription->getEmail());
                 $this->backInStockNotificationRepository->remove($subscription);
             }
+            /*if ($this->availabilityChecker->isStockAvailable($productVariant)) {
+                $this->sendEmail($subscription, $productVariant, $channel);
+                $this->backInStockNotificationRepository->remove($subscription);
+            }*/
         }
 
         return 0;
